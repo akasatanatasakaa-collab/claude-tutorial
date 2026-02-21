@@ -7,34 +7,96 @@
         body {
             font-family: sans-serif;
             text-align: center;
-            margin-top: 100px;
-            background-color: #f0f0f0;
+            margin-top: 40px;
+            background-color: #e8f5e9;
         }
         h1 {
             color: #333;
         }
         .count {
             font-size: 48px;
+            margin: 10px;
+        }
+        .plant {
+            font-size: 80px;
             margin: 20px;
+            min-height: 100px;
+            transition: all 0.3s ease;
+        }
+        .stage-label {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 20px;
         }
         button {
             font-size: 20px;
             padding: 10px 30px;
             cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            margin: 5px;
         }
+        .up { background-color: #4CAF50; }
+        .up:hover { background-color: #45a049; }
+        .down { background-color: #e94560; }
+        .down:hover { background-color: #c73650; }
+        .reset { background-color: #888; }
+        .reset:hover { background-color: #666; }
     </style>
 </head>
 <body>
     <h1>はじめてのClaude Code</h1>
-    <p>ボタンを押すとカウントが増えます</p>
+    <p>ボタンを押して花を咲かせよう！</p>
+    <div class="plant" id="plant">🌱</div>
+    <div class="stage-label" id="stage">たねから芽が出たよ</div>
     <div class="count" id="count">0</div>
-    <button onclick="increment()">カウントアップ</button>
+    <button class="up" onclick="increment()">+1</button>
+    <button class="down" onclick="decrement()">-1</button>
+    <button class="reset" onclick="reset()">リセット</button>
 
     <script>
         let count = 0;
+
+        const stages = [
+            { min: 0,  emoji: '🌱', label: 'たねから芽が出たよ',     size: 80  },
+            { min: 3,  emoji: '🌿', label: 'すこし育ってきた！',     size: 90  },
+            { min: 6,  emoji: '🪴', label: 'しっかり成長中！',       size: 100 },
+            { min: 10, emoji: '🌷', label: 'つぼみがついた！',       size: 110 },
+            { min: 15, emoji: '🌸', label: 'きれいに咲いたよ！',     size: 120 },
+            { min: 20, emoji: '🌺', label: '満開！すばらしい！',     size: 130 },
+            { min: 30, emoji: '💐', label: '花束になった！おめでとう！', size: 140 },
+        ];
+
+        function getStage() {
+            let current = stages[0];
+            for (const stage of stages) {
+                if (count >= stage.min) current = stage;
+            }
+            return current;
+        }
+
+        function update() {
+            const stage = getStage();
+            document.getElementById('count').textContent = count;
+            document.getElementById('plant').textContent = stage.emoji;
+            document.getElementById('plant').style.fontSize = stage.size + 'px';
+            document.getElementById('stage').textContent = stage.label;
+        }
+
         function increment() {
             count++;
-            document.getElementById('count').textContent = count;
+            update();
+        }
+
+        function decrement() {
+            if (count > 0) count--;
+            update();
+        }
+
+        function reset() {
+            count = 0;
+            update();
         }
     </script>
 </body>
