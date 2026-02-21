@@ -245,12 +245,19 @@
         <a href="#git-commands">Git コマンド</a>
     </div>
     <div class="nav-group">
+        <div class="nav-group-title">応用</div>
+        <a href="#vscode">VSCode連携</a>
+        <a href="#pr">PR（プルリクエスト）</a>
+        <a href="#prompt">プロンプトのコツ</a>
+    </div>
+    <div class="nav-group">
         <div class="nav-group-title">ロードマップ</div>
         <a href="#roadmap">学習ロードマップ</a>
     </div>
     <div class="nav-group">
         <div class="nav-group-title">作ったもの</div>
         <a href="index.html" class="page-link">🌱 花カウンター</a>
+        <a href="quiz/index.html" class="page-link">🧠 クイズアプリ</a>
         <a href="profile.html" class="page-link">👤 プロフィール</a>
     </div>
 </nav>
@@ -260,9 +267,9 @@
     <p class="subtitle">goroku のための学習ガイド</p>
 
     <!-- 進捗 -->
-    <div class="progress-text">全体の進捗: 12 / 30 項目完了</div>
+    <div class="progress-text">全体の進捗: 27 / 31 項目完了</div>
     <div class="progress-container">
-        <div class="progress-bar" style="width: 40%"></div>
+        <div class="progress-bar" style="width: 87%"></div>
     </div>
 
     <!-- 基本操作 -->
@@ -351,6 +358,39 @@
 <span class="cmd">git merge</span> ブランチ名          <span class="comment">→ ブランチを本体に合流</span></code></pre>
     <div class="tip">Claude Code では「コミットして」と言うだけで自動でやってくれる</div>
 
+    <!-- VSCode連携 -->
+    <h2 id="vscode">VSCode との連携</h2>
+    <table>
+        <tr><th>機能</th><th>やり方</th><th>使う場面</th></tr>
+        <tr><td>コード選択→質問</td><td>エディタで選択→チャットに質問</td><td>「ここ何？」「ここ変えて」</td></tr>
+        <tr><td>ソース管理</td><td>左の枝分かれアイコン</td><td>変更箇所を視覚的に確認</td></tr>
+        <tr><td>ターミナル</td><td><code>Ctrl + @</code></td><td>Claude Codeがあれば普段は不要</td></tr>
+    </table>
+    <div class="tip">会話履歴はセッション限り。フォルダを開き直すと消える（コードとGitは残る）</div>
+
+    <!-- PR -->
+    <h2 id="pr">PR（プルリクエスト）</h2>
+    <ul>
+        <li><strong>PR</strong> = 「この変更を本体に取り込んでいいですか？」という提案</li>
+        <li><strong>レビュー</strong> = 提案された変更をチェックすること</li>
+        <li><strong>マージ</strong> = 承認されたPRを本体に取り込むこと</li>
+    </ul>
+    <pre><code><span class="cmd">git checkout -b</span> ブランチ名   <span class="comment">→ 作業用ブランチを作る</span>
+<span class="comment">（コードを変更してコミット）</span>
+<span class="cmd">git push -u origin</span> ブランチ名 <span class="comment">→ GitHubに送る</span>
+<span class="cmd">gh pr create</span>                  <span class="comment">→ PRを作成</span>
+<span class="cmd">gh pr merge</span>                   <span class="comment">→ マージ（本体に取り込む）</span></code></pre>
+
+    <!-- プロンプトのコツ -->
+    <h2 id="prompt">プロンプトの書き方のコツ</h2>
+    <table>
+        <tr><th>レベル</th><th>例</th></tr>
+        <tr><td>雑でもOK</td><td>「リンク追加して」</td></tr>
+        <tr><td>普通</td><td>「index.htmlにクイズへのリンクを追加して」</td></tr>
+        <tr><td>上手い</td><td>「index.htmlの花カウンターの下に、quiz/index.htmlへのリンク集を追加して。ダークモードに合うデザインで」</td></tr>
+    </table>
+    <div class="tip">完璧を目指さなくていい。結果を見て「ここ変えて」と追加指示すればOK</div>
+
     <!-- ロードマップ -->
     <h2 id="roadmap">学習ロードマップ</h2>
 
@@ -385,57 +425,57 @@
 
     <div class="level">
         <div class="level-header">
-            <span class="level-badge">進行中</span>
+            <span class="level-badge complete">完了</span>
             <span class="level-title">レベル3: プロジェクト管理</span>
         </div>
         <ul class="checklist">
             <li class="done">Git のブランチを使う</li>
-            <li class="todo">GitHubアカウントを作り、リポジトリをpushする</li>
-            <li class="todo">CLAUDE.md にプロジェクトルールを充実させる</li>
-            <li class="todo">/compact を使って長い会話を管理する</li>
-            <li class="todo">VSCodeとの連携に慣れる</li>
+            <li class="done">GitHubアカウントを作り、リポジトリをpushする</li>
+            <li class="done">CLAUDE.md にプロジェクトルールを充実させる</li>
+            <li class="done">/compact を使って長い会話を管理する</li>
+            <li class="done">VSCodeとの連携に慣れる</li>
         </ul>
     </div>
 
     <div class="level">
         <div class="level-header">
-            <span class="level-badge">レベル4</span>
-            <span class="level-title">実践的な開発</span>
+            <span class="level-badge complete">完了</span>
+            <span class="level-title">レベル4: 実践的な開発</span>
         </div>
         <ul class="checklist">
-            <li class="todo">ToDoアプリなど小さなアプリを一から作る</li>
-            <li class="todo">複数ファイルのプロジェクトを扱う</li>
-            <li class="todo">テストコードを書いてもらう</li>
-            <li class="todo">バグを再現→原因特定→修正の流れを体験</li>
-            <li class="todo">「コミットして」だけでGit操作を任せる</li>
+            <li class="done">クイズアプリを一から作る</li>
+            <li class="done">複数ファイルのプロジェクトを扱う（quiz/フォルダ）</li>
+            <li class="done">テストコードを書いてもらう</li>
+            <li class="done">バグを再現→原因特定→修正の流れを体験</li>
+            <li class="done">「コミットして」だけでGit操作を任せる</li>
         </ul>
     </div>
 
     <div class="level">
         <div class="level-header">
-            <span class="level-badge">レベル5</span>
-            <span class="level-title">応用テクニック</span>
+            <span class="level-badge complete">完了</span>
+            <span class="level-title">レベル5: 応用テクニック</span>
         </div>
         <ul class="checklist">
-            <li class="todo">MCP サーバーを追加して機能を拡張する</li>
-            <li class="todo">Skills（カスタムコマンド）を自作する</li>
-            <li class="todo">Hooks で自動化する</li>
-            <li class="todo">大きなコードベースを読み解いてもらう</li>
-            <li class="todo">PRの作成・レビューをやってもらう</li>
+            <li class="done">MCP サーバーを追加して機能を拡張する</li>
+            <li class="done">Skills（カスタムコマンド）を自作する</li>
+            <li class="done">Hooks で自動化する</li>
+            <li class="done">大きなコードベースを読み解いてもらう</li>
+            <li class="done">PRの作成・レビューをやってもらう</li>
         </ul>
     </div>
 
     <div class="level">
         <div class="level-header">
-            <span class="level-badge">レベル6</span>
-            <span class="level-title">マスター</span>
+            <span class="level-badge">進行中</span>
+            <span class="level-title">レベル6: マスター</span>
         </div>
         <ul class="checklist">
             <li class="todo">複雑なアプリを設計から実装まで任せる</li>
             <li class="todo">既存のOSSを読み解いて改修する</li>
-            <li class="todo">CI/CDパイプラインを構築する</li>
+            <li class="done">CI/CDパイプラインを構築する（GitHub Pages）</li>
             <li class="todo">チーム開発でClaude Codeを活用する</li>
-            <li class="todo">プロンプトの書き方を最適化する</li>
+            <li class="done">プロンプトの書き方を最適化する</li>
         </ul>
     </div>
 
@@ -450,6 +490,7 @@
     <h2>作ったもの</h2>
     <div class="page-links">
         <a href="index.html" class="page-link">🌱 花カウンター</a>
+        <a href="quiz/index.html" class="page-link">🧠 クイズアプリ</a>
         <a href="profile.html" class="page-link">👤 プロフィールページ</a>
     </div>
 </main>
