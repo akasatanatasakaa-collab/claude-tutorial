@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Claude Code チュートリアル</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.8;
+        }
+
+        /* サイドバー */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            background: #161b22;
+            border-right: 1px solid #30363d;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .sidebar h2 {
+            color: #58a6ff;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .sidebar a {
+            display: block;
+            color: #8b949e;
+            text-decoration: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+        .sidebar a:hover { background: #21262d; color: #c9d1d9; }
+        .sidebar a.active { background: #1f6feb33; color: #58a6ff; }
+        .nav-group { margin-bottom: 15px; }
+        .nav-group-title {
+            color: #c9d1d9;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 6px 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* メインコンテンツ */
+        .main {
+            margin-left: 260px;
+            max-width: 800px;
+            padding: 40px 50px;
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        h1 span { color: #58a6ff; }
+        .subtitle {
+            color: #8b949e;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+        h2 {
+            color: #ffffff;
+            font-size: 22px;
+            margin-top: 50px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+        h3 {
+            color: #c9d1d9;
+            font-size: 16px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+
+        /* テーブル */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th {
+            background: #161b22;
+            color: #58a6ff;
+            text-align: left;
+            padding: 10px 15px;
+            font-size: 13px;
+            border-bottom: 2px solid #30363d;
+        }
+        td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #21262d;
+            font-size: 14px;
+        }
+        tr:hover { background: #161b22; }
+
+        /* コードブロック */
+        code {
+            background: #161b22;
+            color: #79c0ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        pre {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px 20px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        pre code { background: none; padding: 0; color: #c9d1d9; }
+        .cmd { color: #79c0ff; }
+        .comment { color: #8b949e; }
+
+        /* リスト */
+        ul, ol { padding-left: 25px; margin: 10px 0; }
+        li { margin-bottom: 5px; font-size: 14px; }
+
+        /* チェックリスト */
+        .checklist { list-style: none; padding-left: 0; }
+        .checklist li {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        .checklist li.done {
+            color: #3fb950;
+        }
+        .checklist li.done::before { content: '✅ '; }
+        .checklist li.todo::before { content: '⬜ '; }
+        .checklist li.todo { color: #8b949e; }
+
+        /* カード */
+        .tip {
+            background: #1f6feb1a;
+            border-left: 3px solid #58a6ff;
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        /* ロードマップ */
+        .level {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin: 15px 0;
+        }
+        .level-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .level-badge {
+            background: #30363d;
+            color: #8b949e;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .level-badge.complete {
+            background: #238636;
+            color: #ffffff;
+        }
+        .level-title {
+            color: #c9d1d9;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* プログレスバー */
+        .progress-container {
+            background: #21262d;
+            border-radius: 20px;
+            height: 8px;
+            margin: 20px 0 30px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: 20px;
+            background: linear-gradient(90deg, #238636, #3fb950);
+            transition: width 0.5s ease;
+        }
+        .progress-text {
+            color: #8b949e;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        /* ナビリンク */
+        .page-links {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .page-link {
+            display: inline-block;
+            background: #21262d;
+            color: #58a6ff;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            border: 1px solid #30363d;
+        }
+        .page-link:hover { background: #30363d; }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <h2>Claude Code チュートリアル</h2>
+    <div class="nav-group">
+        <div class="nav-group-title">基礎知識</div>
+        <a href="#basic">基本操作</a>
+        <a href="#commands">よく使うコマンド</a>
+        <a href="#permissions">許可メッセージ</a>
+        <a href="#claudemd">CLAUDE.md</a>
+        <a href="#terms">周辺用語</a>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title">Git</div>
+        <a href="#git">Git の基本</a>
+        <a href="#git-terms">Git 用語</a>
+        <a href="#git-commands">Git コマンド</a>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title">ロードマップ</div>
+        <a href="#roadmap">学習ロードマップ</a>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title">作ったもの</div>
+        <a href="index.html" class="page-link">🌱 花カウンター</a>
+        <a href="profile.html" class="page-link">👤 プロフィール</a>
+    </div>
+</nav>
+
+<main class="main">
+    <h1><span>Claude Code</span> チュートリアル</h1>
+    <p class="subtitle">goroku のための学習ガイド</p>
+
+    <!-- 進捗 -->
+    <div class="progress-text">全体の進捗: 12 / 30 項目完了</div>
+    <div class="progress-container">
+        <div class="progress-bar" style="width: 40%"></div>
+    </div>
+
+    <!-- 基本操作 -->
+    <h2 id="basic">基本操作</h2>
+    <ul>
+        <li>やりたいことを日本語でそのまま伝えるだけでOK</li>
+        <li>雑な伝え方でも大丈夫（「なんかエラー出た」等）</li>
+    </ul>
+
+    <!-- よく使うコマンド -->
+    <h2 id="commands">よく使うコマンド</h2>
+    <table>
+        <tr><th>コマンド</th><th>説明</th></tr>
+        <tr><td><code>/help</code></td><td>ヘルプを表示</td></tr>
+        <tr><td><code>/clear</code></td><td>会話を完全リセット（元に戻せない）</td></tr>
+        <tr><td><code>/compact</code></td><td>会話を要約して圧縮（文脈は残る）</td></tr>
+    </table>
+    <div class="tip">迷ったら <code>/compact</code> が安全</div>
+
+    <!-- 許可メッセージ -->
+    <h2 id="permissions">許可メッセージ（英語→日本語）</h2>
+    <table>
+        <tr><th>英語</th><th>意味</th></tr>
+        <tr><td><code>Allow Read</code></td><td>ファイルを読む</td></tr>
+        <tr><td><code>Allow Write</code></td><td>ファイルを作成/上書き</td></tr>
+        <tr><td><code>Allow Edit</code></td><td>ファイルを編集</td></tr>
+        <tr><td><code>Allow Bash</code></td><td>コマンドを実行</td></tr>
+        <tr><td><code>Allow Glob</code></td><td>ファイルを検索</td></tr>
+        <tr><td><code>Allow Grep</code></td><td>ファイルの中身を検索</td></tr>
+        <tr><td><code>Allow</code></td><td>今回だけ許可</td></tr>
+        <tr><td><code>Allow always</code></td><td>今後ずっと許可</td></tr>
+        <tr><td><code>Deny</code></td><td>拒否</td></tr>
+    </table>
+
+    <!-- CLAUDE.md -->
+    <h2 id="claudemd">CLAUDE.md</h2>
+    <ul>
+        <li>プロジェクトのルールを書く設定ファイル</li>
+        <li>自動作成されない。自分で作る</li>
+        <li>置く場所:
+            <ul>
+                <li>プロジェクトのルート → そのプロジェクト専用</li>
+                <li><code>~/.claude/CLAUDE.md</code> → 全プロジェクト共通</li>
+            </ul>
+        </li>
+        <li><code>/clear</code> しても CLAUDE.md の内容は引き継がれる</li>
+    </ul>
+
+    <!-- 周辺用語 -->
+    <h2 id="terms">周辺用語</h2>
+    <table>
+        <tr><th>用語</th><th>意味</th></tr>
+        <tr><td>MCP</td><td>追加機能をつなげる仕組み（スマホにアプリを入れるイメージ）</td></tr>
+        <tr><td>Skills</td><td>ショートカットコマンド（<code>/commit</code> 等）</td></tr>
+        <tr><td>Hooks</td><td>特定のタイミングで自動実行されるスクリプト（上級者向け）</td></tr>
+        <tr><td>コンテキストウィンドウ</td><td>AIが一度に覚えていられる量</td></tr>
+        <tr><td>プロンプト</td><td>AIへの指示や質問</td></tr>
+        <tr><td>トークン</td><td>AIが処理するテキストの単位。多い＝コスト高い</td></tr>
+    </table>
+
+    <!-- Git -->
+    <h2 id="git">Git の基本</h2>
+    <ul>
+        <li><strong>Git</strong> = 自分のPC上でセーブポイントを管理するツール</li>
+        <li><strong>GitHub</strong> = セーブデータをネット上に保管するサービス</li>
+    </ul>
+
+    <h3 id="git-terms">Git 用語</h3>
+    <table>
+        <tr><th>用語</th><th>意味</th></tr>
+        <tr><td>リポジトリ (repo)</td><td>Gitで管理されたフォルダ</td></tr>
+        <tr><td>コミット (commit)</td><td>セーブポイントを作る</td></tr>
+        <tr><td>プッシュ (push)</td><td>GitHubにアップロード</td></tr>
+        <tr><td>プル (pull)</td><td>GitHubからダウンロード</td></tr>
+        <tr><td>ブランチ (branch)</td><td>本体に影響を与えず別の作業をする枝分かれ</td></tr>
+        <tr><td>マージ (merge)</td><td>ブランチの変更を本体に合流させる</td></tr>
+    </table>
+
+    <h3 id="git-commands">Git コマンド</h3>
+    <pre><code><span class="cmd">git init</span>                    <span class="comment">→ リポジトリ作成（最初に1回だけ）</span>
+<span class="cmd">git add</span> ファイル名            <span class="comment">→ セーブ対象に追加</span>
+<span class="cmd">git commit</span> -m "メッセージ"    <span class="comment">→ セーブポイント作成</span>
+<span class="cmd">git diff</span>                    <span class="comment">→ 何が変わったか確認</span>
+<span class="cmd">git checkout</span> -- ファイル名    <span class="comment">→ 変更を元に戻す</span>
+<span class="cmd">git checkout -b</span> ブランチ名   <span class="comment">→ 新しいブランチを作って移動</span>
+<span class="cmd">git merge</span> ブランチ名          <span class="comment">→ ブランチを本体に合流</span></code></pre>
+    <div class="tip">Claude Code では「コミットして」と言うだけで自動でやってくれる</div>
+
+    <!-- ロードマップ -->
+    <h2 id="roadmap">学習ロードマップ</h2>
+
+    <div class="level">
+        <div class="level-header">
+            <span class="level-badge complete">完了</span>
+            <span class="level-title">レベル1: 基本操作（入門）</span>
+        </div>
+        <ul class="checklist">
+            <li class="done">Claude Code に質問する</li>
+            <li class="done">許可メッセージを理解する</li>
+            <li class="done">ファイルを作ってもらう</li>
+            <li class="done">/clear と /compact の違いを知る</li>
+            <li class="done">CLAUDE.md を作る</li>
+            <li class="done">Git の基本（init, commit, diff, 元に戻す）</li>
+        </ul>
+    </div>
+
+    <div class="level">
+        <div class="level-header">
+            <span class="level-badge complete">完了</span>
+            <span class="level-title">レベル2: コードを書いてもらう</span>
+        </div>
+        <ul class="checklist">
+            <li class="done">HTMLファイルを編集してもらう</li>
+            <li class="done">簡単なWebページを一から作ってもらう</li>
+            <li class="done">Pythonスクリプトを作ってもらう</li>
+            <li class="done">エラーを貼り付けて直してもらう</li>
+            <li class="done">既存のコードを説明してもらう</li>
+        </ul>
+    </div>
+
+    <div class="level">
+        <div class="level-header">
+            <span class="level-badge">進行中</span>
+            <span class="level-title">レベル3: プロジェクト管理</span>
+        </div>
+        <ul class="checklist">
+            <li class="done">Git のブランチを使う</li>
+            <li class="todo">GitHubアカウントを作り、リポジトリをpushする</li>
+            <li class="todo">CLAUDE.md にプロジェクトルールを充実させる</li>
+            <li class="todo">/compact を使って長い会話を管理する</li>
+            <li class="todo">VSCodeとの連携に慣れる</li>
+        </ul>
+    </div>
+
+    <div class="level">
+        <div class="level-header">
+            <span class="level-badge">レベル4</span>
+            <span class="level-title">実践的な開発</span>
+        </div>
+        <ul class="checklist">
+            <li class="todo">ToDoアプリなど小さなアプリを一から作る</li>
+            <li class="todo">複数ファイルのプロジェクトを扱う</li>
+            <li class="todo">テストコードを書いてもらう</li>
+            <li class="todo">バグを再現→原因特定→修正の流れを体験</li>
+            <li class="todo">「コミットして」だけでGit操作を任せる</li>
+        </ul>
+    </div>
+
+    <div class="level">
+        <div class="level-header">
+            <span class="level-badge">レベル5</span>
+            <span class="level-title">応用テクニック</span>
+        </div>
+        <ul class="checklist">
+            <li class="todo">MCP サーバーを追加して機能を拡張する</li>
+            <li class="todo">Skills（カスタムコマンド）を自作する</li>
+            <li class="todo">Hooks で自動化する</li>
+            <li class="todo">大きなコードベースを読み解いてもらう</li>
+            <li class="todo">PRの作成・レビューをやってもらう</li>
+        </ul>
+    </div>
+
+    <div class="level">
+        <div class="level-header">
+            <span class="level-badge">レベル6</span>
+            <span class="level-title">マスター</span>
+        </div>
+        <ul class="checklist">
+            <li class="todo">複雑なアプリを設計から実装まで任せる</li>
+            <li class="todo">既存のOSSを読み解いて改修する</li>
+            <li class="todo">CI/CDパイプラインを構築する</li>
+            <li class="todo">チーム開発でClaude Codeを活用する</li>
+            <li class="todo">プロンプトの書き方を最適化する</li>
+        </ul>
+    </div>
+
+    <h2>学習のコツ</h2>
+    <ul>
+        <li>一度に全部やらなくてOK。1日1〜2項目ずつ進める</li>
+        <li>わからないことはClaude Codeに「〇〇って何？」と聞くだけでいい</li>
+        <li>失敗しても大丈夫。Gitがあれば元に戻せる</li>
+        <li>実際に何か作りたいものを決めると上達が早い</li>
+    </ul>
+
+    <h2>作ったもの</h2>
+    <div class="page-links">
+        <a href="index.html" class="page-link">🌱 花カウンター</a>
+        <a href="profile.html" class="page-link">👤 プロフィールページ</a>
+    </div>
+</main>
+
+</body>
+</html>
