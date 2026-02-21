@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code クイズ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- スタート画面 -->
+    <div id="start-screen" class="screen">
+        <h1>🧠 Claude Code クイズ</h1>
+        <p>Claude Code について学んだことをテストしよう！</p>
+        <p class="question-count"></p>
+        <button id="start-btn" onclick="startQuiz()">スタート</button>
+    </div>
+
+    <!-- クイズ画面 -->
+    <div id="quiz-screen" class="screen hidden">
+        <div class="progress">
+            <span id="progress-text">1 / 10</span>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
+        <div id="question-box" class="question-box">
+            <h2 id="question-text"></h2>
+        </div>
+        <div id="choices" class="choices"></div>
+        <div id="feedback" class="feedback hidden"></div>
+        <button id="next-btn" class="hidden" onclick="nextQuestion()">次の問題 →</button>
+    </div>
+
+    <!-- 結果画面 -->
+    <div id="result-screen" class="screen hidden">
+        <h1>📊 結果発表</h1>
+        <div class="score-box">
+            <p class="score-text"><span id="score">0</span> / <span id="total">10</span></p>
+            <p id="score-message" class="score-message"></p>
+        </div>
+        <div id="review" class="review"></div>
+        <button onclick="location.reload()">もう一度チャレンジ</button>
+    </div>
+
+    <script src="questions.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
