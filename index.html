@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Claude Code チュートリアル</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            margin-top: 100px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .count {
+            font-size: 48px;
+            margin: 20px;
+        }
+        button {
+            font-size: 20px;
+            padding: 10px 30px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>はじめてのClaude Code</h1>
+    <p>ボタンを押すとカウントが増えます</p>
+    <div class="count" id="count">0</div>
+    <button onclick="increment()">カウントアップ</button>
+
+    <script>
+        let count = 0;
+        function increment() {
+            count++;
+            document.getElementById('count').textContent = count;
+        }
+    </script>
+</body>
+</html>
