@@ -1,0 +1,220 @@
+/* ダークモード基本設定 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* 画面の表示/非表示 */
+.screen {
+    max-width: 600px;
+    width: 100%;
+    text-align: center;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* スタート画面 */
+#start-screen h1 {
+    font-size: 2.2em;
+    margin-bottom: 16px;
+    color: #fff;
+}
+
+#start-screen p {
+    font-size: 1.1em;
+    margin-bottom: 12px;
+    color: #aaa;
+}
+
+.question-count {
+    font-size: 0.95em;
+    color: #888;
+}
+
+/* ボタン共通 */
+button {
+    background: #6c63ff;
+    color: #fff;
+    border: none;
+    padding: 14px 40px;
+    font-size: 1.1em;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background: #5a52d5;
+}
+
+/* 進捗バー */
+.progress {
+    margin-bottom: 24px;
+}
+
+#progress-text {
+    display: block;
+    margin-bottom: 8px;
+    color: #aaa;
+    font-size: 0.95em;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #2a2a4a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #6c63ff;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* 問題ボックス */
+.question-box {
+    background: #16213e;
+    padding: 28px 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.question-box h2 {
+    font-size: 1.2em;
+    line-height: 1.6;
+    color: #fff;
+}
+
+/* 選択肢 */
+.choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.choice-btn {
+    background: #2a2a4a;
+    color: #e0e0e0;
+    border: 2px solid #3a3a5a;
+    padding: 14px 20px;
+    font-size: 1em;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    margin-top: 0;
+}
+
+.choice-btn:hover {
+    background: #3a3a5a;
+    border-color: #6c63ff;
+}
+
+.choice-btn.correct {
+    background: #1b4332;
+    border-color: #2d6a4f;
+    color: #95d5b2;
+}
+
+.choice-btn.wrong {
+    background: #4a1520;
+    border-color: #6a2535;
+    color: #f5a0a0;
+}
+
+.choice-btn.disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.choice-btn.disabled:hover {
+    background: #2a2a4a;
+    border-color: #3a3a5a;
+}
+
+/* フィードバック */
+.feedback {
+    margin-top: 16px;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+.feedback.correct {
+    background: #1b4332;
+    color: #95d5b2;
+}
+
+.feedback.wrong {
+    background: #4a1520;
+    color: #f5a0a0;
+}
+
+/* 結果画面 */
+.score-box {
+    background: #16213e;
+    padding: 32px;
+    border-radius: 12px;
+    margin: 24px 0;
+}
+
+.score-text {
+    font-size: 3em;
+    font-weight: bold;
+    color: #6c63ff;
+}
+
+.score-message {
+    margin-top: 12px;
+    font-size: 1.2em;
+    color: #aaa;
+}
+
+/* 復習セクション */
+.review {
+    text-align: left;
+    margin-top: 24px;
+}
+
+.review-item {
+    background: #16213e;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid #6c63ff;
+}
+
+.review-item.wrong-answer {
+    border-left-color: #e74c3c;
+}
+
+.review-item .review-question {
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #fff;
+}
+
+.review-item .review-answer {
+    font-size: 0.9em;
+    color: #aaa;
+}
