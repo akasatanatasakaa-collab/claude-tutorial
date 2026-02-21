@@ -44,6 +44,30 @@
         .down:hover { background-color: #c73650; }
         .reset { background-color: #888; }
         .reset:hover { background-color: #666; }
+        .links {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+        .links h2 {
+            font-size: 18px;
+            color: #aaa;
+            margin-bottom: 12px;
+        }
+        .links a {
+            display: inline-block;
+            color: #6c63ff;
+            text-decoration: none;
+            margin: 6px 12px;
+            padding: 8px 16px;
+            border: 1px solid #6c63ff;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .links a:hover {
+            background: #6c63ff;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -55,6 +79,13 @@
     <button class="up" onclick="increment()">+1</button>
     <button class="down" onclick="decrement()">-1</button>
     <button class="reset" onclick="reset()">リセット</button>
+
+    <div class="links">
+        <h2>リンク集</h2>
+        <a href="quiz/index.html">クイズアプリ</a>
+        <a href="profile.html">自己紹介</a>
+        <a href="tutorial.html">チュートリアルまとめ</a>
+    </div>
 
     <script>
         let count = 0;
