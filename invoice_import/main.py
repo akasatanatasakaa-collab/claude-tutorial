@@ -105,13 +105,23 @@ def run_drive_mode(config: dict, client_id: str):
         file_paths = list(file_paths)
         drive_files = list(drive_files)
 
+    # Driveファイルのリンクをファイルパスと紐づけるマップを作成
+    drive_link_map = {}
+    for fp, df in zip(file_paths, drive_files):
+        drive_link_map[Path(fp).name] = df.get("webViewLink", "")
+
     # 処理実行
-    csv_path, journals = run_processing(config, client_id, file_paths)
+    csv_path, journals, invoice_data_list = run_processing(
+        config, client_id, file_paths, drive_link_map=drive_link_map
+    )
 
     if csv_path and journals:
-        # CSVをDriveにアップロード & 処理済みファイルを移動
+        # CSVをDriveにアップロード & 処理済みファイルをリネーム+移動
         print("\n=== Google Driveに反映 ===")
-        upload_csv_and_move_sources(service, merged_config, csv_path, drive_files)
+        upload_csv_and_move_sources(
+            service, merged_config, csv_path, drive_files,
+            invoice_data_list=invoice_data_list,
+        )
 
         # 処理ログに記録
         source_names = [Path(fp).name for fp in file_paths]
@@ -141,7 +151,7 @@ def run_local_mode(config: dict, client_id: str, file_paths: list[str]):
         print("処理するファイルがありません。")
         return
 
-    csv_path, journals = run_processing(config, client_id, valid_paths)
+    csv_path, journals, _ = run_processing(config, client_id, valid_paths)
 
     if csv_path and journals:
         # ローカルモードでも処理ログに記録
@@ -153,8 +163,9 @@ def run_local_mode(config: dict, client_id: str, file_paths: list[str]):
 
 
 def run_processing(config: dict, client_id: str,
-                   file_paths: list[str]) -> tuple[str | None, list[dict] | None]:
-    """ファイル処理の共通ロジック（顧客別）。(CSVパス, 仕訳リスト)を返す"""
+                   file_paths: list[str],
+                   drive_link_map: dict | None = None) -> tuple[str | None, list[dict] | None, list[dict] | None]:
+    """ファイル処理の共通ロジック（顧客別）。(CSVパス, 仕訳リスト, 請求書データリスト)を返す"""
     history_path = get_client_history_path(client_id)
     output_dir = get_client_output_dir(client_id)
 
@@ -175,6 +186,13 @@ def run_processing(config: dict, client_id: str,
         client_rules=client_rules,
         client_mappings=client_mappings,
     )
+
+    # DriveリンクをGemini抽出結果に紐づける
+    if drive_link_map:
+        for data in invoice_data_list:
+            source = data.get("source_file", "")
+            if source in drive_link_map:
+                data["drive_link"] = drive_link_map[source]
 
     # 2. 抽出データを仕訳にマッピング
     print("\n=== 仕訳マッピング ===")
@@ -205,7 +223,7 @@ def run_processing(config: dict, client_id: str,
     print("\n=== 仕訳履歴の更新 ===")
     update_journal_history(history_path, journals)
 
-    return output_path, journals
+    return output_path, journals, invoice_data_list
 
 
 def show_client_list():

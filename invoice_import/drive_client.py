@@ -164,6 +164,20 @@ def upload_file(service, local_path: str, folder_id: str, file_name: str = None)
     return uploaded["id"]
 
 
+def get_file_link(file_id: str) -> str:
+    """DriveファイルのリンクURLを生成する"""
+    return f"https://drive.google.com/file/d/{file_id}/view"
+
+
+def rename_file(service, file_id: str, new_name: str):
+    """Drive上のファイル名を変更する"""
+    service.files().update(
+        fileId=file_id,
+        body={"name": new_name},
+        fields="id, name",
+    ).execute()
+
+
 def fetch_invoices(config: dict, download_dir: str = "downloads") -> tuple[list[str], list[dict], object]:
     """ドライブからファイルを取得し、(ローカルパスのリスト, Driveファイル情報リスト, serviceオブジェクト)を返す"""
     drive_config = config["google_drive"]
@@ -183,6 +197,8 @@ def fetch_invoices(config: dict, download_dir: str = "downloads") -> tuple[list[
     print(f"{len(files)}件のファイルが見つかりました:")
     downloaded = []
     for f in files:
+        # DriveリンクをファイルIDから生成して付与
+        f["webViewLink"] = get_file_link(f["id"])
         print(f"  - {f['name']} ({f['mimeType']})")
         path = download_file(service, f["id"], f["name"], download_dir)
         downloaded.append(path)
@@ -190,9 +206,35 @@ def fetch_invoices(config: dict, download_dir: str = "downloads") -> tuple[list[
     return downloaded, files, service
 
 
+def rename_for_denchoho(service, file_info: dict, invoice_data: dict):
+    """電子帳簿保存法の検索要件に対応したファイル名にリネームする
+
+    形式: YYYYMMDD_取引先名_金額円_元のファイル名.拡張子
+    これにより日付・取引先・金額でファイル検索が可能になる
+    """
+    date_str = invoice_data.get("date", "").replace("/", "")
+    vendor = invoice_data.get("vendor_name", "不明")
+    amount = invoice_data.get("amount", 0)
+    original_name = file_info["name"]
+    suffix = Path(original_name).suffix
+
+    # ファイル名に使えない文字を除去
+    vendor_safe = vendor.replace("/", "／").replace("\\", "＼").replace(":", "：")
+
+    new_name = f"{date_str}_{vendor_safe}_{amount}円_{original_name}"
+
+    # Driveのファイル名が長すぎる場合は元ファイル名を省略
+    if len(new_name) > 200:
+        new_name = f"{date_str}_{vendor_safe}_{amount}円{suffix}"
+
+    rename_file(service, file_info["id"], new_name)
+    return new_name
+
+
 def upload_csv_and_move_sources(service, config: dict, csv_path: str,
-                                 source_files: list[dict]):
-    """CSVをDriveにアップロードし、処理済みファイルを移動する"""
+                                 source_files: list[dict],
+                                 invoice_data_list: list[dict] | None = None):
+    """CSVをDriveにアップロードし、処理済みファイルをリネーム＋移動する"""
     watch_folder_id = config["google_drive"]["watch_folder_id"]
 
     # サブフォルダを取得または作成
@@ -204,9 +246,14 @@ def upload_csv_and_move_sources(service, config: dict, csv_path: str,
     csv_file_id = upload_file(service, csv_path, import_folder_id, csv_name)
     print(f"CSVをDriveにアップロード: {csv_name}")
 
-    # 処理済みファイルを「処理済み」フォルダに移動
-    for f in source_files:
+    # 処理済みファイルを電帳法対応リネーム＋移動
+    for i, f in enumerate(source_files):
+        # 電帳法対応のファイル名にリネーム
+        if invoice_data_list and i < len(invoice_data_list):
+            new_name = rename_for_denchoho(service, f, invoice_data_list[i])
+            print(f"  リネーム: {f['name']} → {new_name}")
+
         move_file(service, f["id"], processed_folder_id)
-        print(f"  移動: {f['name']} → 処理済み/")
+        print(f"  移動: → 処理済み/")
 
     return csv_file_id

@@ -74,7 +74,17 @@ def map_to_journal(invoice_data: dict, history: dict) -> dict:
         "summary": summary,
         "vendor": vendor,
         "source_file": invoice_data.get("source_file", ""),
+        "drive_link": invoice_data.get("drive_link", ""),
     }
+
+
+def _build_memo(journal: dict) -> str:
+    """メモ列を構築する。Driveリンクがあれば含める"""
+    parts = [f"元ファイル: {journal['source_file']}"]
+    drive_link = journal.get("drive_link", "")
+    if drive_link:
+        parts.append(drive_link)
+    return " | ".join(parts)
 
 
 def generate_mf_csv(journals: list[dict], output_path: str, encoding: str = "utf-8") -> str:
@@ -131,7 +141,7 @@ def generate_mf_csv(journals: list[dict], output_path: str, encoding: str = "utf
                 journal["summary"],                     # 摘要
                 "",                                     # タグ
                 "",                                     # MF仕訳タイプ
-                f"元ファイル: {journal['source_file']}", # メモ
+                _build_memo(journal),                    # メモ
             ]
             writer.writerow(row)
 
