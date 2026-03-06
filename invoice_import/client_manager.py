@@ -7,6 +7,7 @@
 import json
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
@@ -180,3 +181,49 @@ def get_client_rules(client_id: str) -> list[str]:
         history = json.load(f)
 
     return history.get("rules", [])
+
+
+def get_processing_log_path(client_id: str) -> str:
+    """顧客の処理ログファイルのパスを返す"""
+    return str(get_client_dir(client_id) / "processing_log.json")
+
+
+def load_processing_log(client_id: str) -> list[dict]:
+    """処理ログを読み込む"""
+    log_path = get_processing_log_path(client_id)
+    if not os.path.exists(log_path):
+        return []
+    with open(log_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def append_processing_log(client_id: str, source_files: list[str],
+                          csv_file: str, journals: list[dict]):
+    """処理ログに記録を追加する（重複処理の検知・監査証跡用）"""
+    log_path = get_processing_log_path(client_id)
+    log = load_processing_log(client_id)
+
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "source_files": source_files,
+        "output_csv": csv_file,
+        "journal_count": len(journals),
+        "total_amount": sum(j.get("amount", 0) for j in journals),
+        "vendors": [j.get("vendor", "") for j in journals],
+    }
+    log.append(entry)
+
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=4)
+
+
+def check_duplicate_files(client_id: str, file_names: list[str]) -> list[str]:
+    """処理ログから重複ファイルを検出する"""
+    log = load_processing_log(client_id)
+    processed_files = set()
+    for entry in log:
+        for f in entry.get("source_files", []):
+            processed_files.add(f)
+
+    duplicates = [f for f in file_names if f in processed_files]
+    return duplicates

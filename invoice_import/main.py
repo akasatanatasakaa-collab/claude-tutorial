@@ -1,5 +1,5 @@
 """
-請求書・領収書 → MFクラウド会計インポートCSV変換システム（会計事務所向け・複数顧客対応）
+請求書・領収書 → MFクラウド会計インポートCSV変換システム（会計事務所向け・Google Drive完結）
 
 使い方:
     # 顧客一覧を表示
@@ -8,7 +8,7 @@
     # 新規顧客を登録
     python main.py --create-client company_a --name "株式会社A" --drive-folder "GoogleDriveのフォルダID"
 
-    # 顧客を指定してGoogle Driveから処理
+    # 顧客を指定してGoogle Driveから処理（CSV生成→Driveアップロード→処理済み移動）
     python main.py --client company_a
 
     # 顧客を指定してローカルファイルを処理
@@ -25,6 +25,9 @@
 
     # 顧客のルール一覧を表示
     python main.py --client company_a --list-rules
+
+    # 処理ログを表示
+    python main.py --client company_a --show-log
 """
 
 import argparse
@@ -36,15 +39,18 @@ from pathlib import Path
 
 from client_manager import (
     add_client_rule,
+    append_processing_log,
     build_client_drive_config,
+    check_duplicate_files,
     create_client,
     get_client_history_path,
     get_client_output_dir,
     get_client_rules,
     list_clients,
     load_client_config,
+    load_processing_log,
 )
-from drive_client import fetch_invoices
+from drive_client import fetch_invoices, upload_csv_and_move_sources
 from gemini_reader import process_files
 from mf_exporter import (
     generate_mf_csv,
@@ -65,7 +71,7 @@ def load_config() -> dict:
 
 
 def run_drive_mode(config: dict, client_id: str):
-    """Google Driveモード: ドライブからファイルを取得して処理"""
+    """Google Driveモード: Drive上で入力→処理→出力を完結させる"""
     client_config = load_client_config(client_id)
     client_name = client_config.get("client_name", client_id)
 
@@ -75,13 +81,46 @@ def run_drive_mode(config: dict, client_id: str):
     merged_config = build_client_drive_config(config, client_config)
 
     download_dir = str(BASE_DIR / "downloads" / client_id)
-    file_paths = fetch_invoices(merged_config, download_dir)
+    file_paths, drive_files, service = fetch_invoices(merged_config, download_dir)
 
     if not file_paths:
         print("処理するファイルがありません。")
         return
 
-    run_processing(config, client_id, file_paths)
+    # 重複チェック
+    file_names = [Path(fp).name for fp in file_paths]
+    duplicates = check_duplicate_files(client_id, file_names)
+    if duplicates:
+        print(f"\n⚠ 以下のファイルは過去に処理済みです:")
+        for d in duplicates:
+            print(f"  - {d}")
+        print("スキップして続行します。")
+        # 重複ファイルを除外
+        filtered = [(fp, df) for fp, df in zip(file_paths, drive_files)
+                     if Path(fp).name not in duplicates]
+        if not filtered:
+            print("新しいファイルがありません。")
+            return
+        file_paths, drive_files = zip(*filtered)
+        file_paths = list(file_paths)
+        drive_files = list(drive_files)
+
+    # 処理実行
+    csv_path, journals = run_processing(config, client_id, file_paths)
+
+    if csv_path and journals:
+        # CSVをDriveにアップロード & 処理済みファイルを移動
+        print("\n=== Google Driveに反映 ===")
+        upload_csv_and_move_sources(service, merged_config, csv_path, drive_files)
+
+        # 処理ログに記録
+        source_names = [Path(fp).name for fp in file_paths]
+        append_processing_log(client_id, source_names, Path(csv_path).name, journals)
+
+        print(f"\n完了！")
+        print(f"  CSVファイル → Drive「MFインポート/」フォルダにアップロード済み")
+        print(f"  処理済み請求書 → Drive「処理済み/」フォルダに移動済み")
+        print(f"MFクラウド会計の「仕訳帳」→「インポート」からDrive上のCSVを取り込んでください。")
 
 
 def run_local_mode(config: dict, client_id: str, file_paths: list[str]):
@@ -102,11 +141,20 @@ def run_local_mode(config: dict, client_id: str, file_paths: list[str]):
         print("処理するファイルがありません。")
         return
 
-    run_processing(config, client_id, valid_paths)
+    csv_path, journals = run_processing(config, client_id, valid_paths)
+
+    if csv_path and journals:
+        # ローカルモードでも処理ログに記録
+        source_names = [Path(fp).name for fp in valid_paths]
+        append_processing_log(client_id, source_names, Path(csv_path).name, journals)
+
+        print(f"\n完了！ CSVファイル: {csv_path}")
+        print("このファイルをMFクラウド会計の「仕訳帳」→「インポート」から取り込んでください。")
 
 
-def run_processing(config: dict, client_id: str, file_paths: list[str]):
-    """ファイル処理の共通ロジック（顧客別）"""
+def run_processing(config: dict, client_id: str,
+                   file_paths: list[str]) -> tuple[str | None, list[dict] | None]:
+    """ファイル処理の共通ロジック（顧客別）。(CSVパス, 仕訳リスト)を返す"""
     history_path = get_client_history_path(client_id)
     output_dir = get_client_output_dir(client_id)
 
@@ -157,8 +205,7 @@ def run_processing(config: dict, client_id: str, file_paths: list[str]):
     print("\n=== 仕訳履歴の更新 ===")
     update_journal_history(history_path, journals)
 
-    print(f"\n完了！ CSVファイル: {output_path}")
-    print("このファイルをMFクラウド会計の「仕訳帳」→「インポート」から取り込んでください。")
+    return output_path, journals
 
 
 def show_client_list():
@@ -242,58 +289,58 @@ def show_rules(client_id: str):
         print(f"  {i}. {rule}")
 
 
+def show_processing_log(client_id: str):
+    """処理ログを表示"""
+    client_config = load_client_config(client_id)
+    client_name = client_config.get("client_name", client_id)
+    log = load_processing_log(client_id)
+
+    print(f"=== [{client_name}] 処理ログ ===")
+
+    if not log:
+        print("処理履歴はありません。")
+        return
+
+    for entry in log:
+        ts = entry.get("timestamp", "不明")
+        csv_file = entry.get("output_csv", "不明")
+        count = entry.get("journal_count", 0)
+        total = entry.get("total_amount", 0)
+        sources = entry.get("source_files", [])
+
+        print(f"\n日時: {ts}")
+        print(f"  出力CSV: {csv_file}")
+        print(f"  仕訳数: {count}件 / 合計: ¥{total:,}")
+        print(f"  元ファイル:")
+        for s in sources:
+            print(f"    - {s}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="請求書・領収書 → MFクラウド会計インポートCSV変換（会計事務所向け）"
     )
 
     # 顧客管理
-    parser.add_argument(
-        "--client", metavar="ID",
-        help="処理対象の顧客ID"
-    )
-    parser.add_argument(
-        "--list-clients", action="store_true",
-        help="登録済み顧客一覧を表示"
-    )
-    parser.add_argument(
-        "--create-client", metavar="ID",
-        help="新規顧客を作成（IDを指定）"
-    )
-    parser.add_argument(
-        "--name", metavar="NAME",
-        help="顧客名（--create-clientと併用）"
-    )
-    parser.add_argument(
-        "--drive-folder", metavar="FOLDER_ID",
-        help="Google DriveのフォルダID（--create-clientと併用）"
-    )
+    parser.add_argument("--client", metavar="ID", help="処理対象の顧客ID")
+    parser.add_argument("--list-clients", action="store_true", help="登録済み顧客一覧を表示")
+    parser.add_argument("--create-client", metavar="ID", help="新規顧客を作成")
+    parser.add_argument("--name", metavar="NAME", help="顧客名（--create-clientと併用）")
+    parser.add_argument("--drive-folder", metavar="FOLDER_ID", help="DriveフォルダID（--create-clientと併用）")
 
     # 処理モード
-    parser.add_argument(
-        "--local", nargs="+", metavar="FILE",
-        help="ローカルファイルを直接指定して処理"
-    )
+    parser.add_argument("--local", nargs="+", metavar="FILE", help="ローカルファイルを直接指定して処理")
 
     # マッピング管理
-    parser.add_argument(
-        "--list-mappings", action="store_true",
-        help="仕訳マッピング一覧を表示"
-    )
-    parser.add_argument(
-        "--add-mapping", nargs="+", metavar="ARG",
-        help="マッピングを追加: 取引先名 借方勘定科目 [借方補助科目] [貸方勘定科目] [税区分]"
-    )
+    parser.add_argument("--list-mappings", action="store_true", help="仕訳マッピング一覧を表示")
+    parser.add_argument("--add-mapping", nargs="+", metavar="ARG", help="マッピングを追加")
 
     # ルール管理（暗黙知の形式知化）
-    parser.add_argument(
-        "--add-rule", metavar="RULE",
-        help="顧客固有の仕訳ルール（暗黙知）を追加"
-    )
-    parser.add_argument(
-        "--list-rules", action="store_true",
-        help="顧客の仕訳ルール一覧を表示"
-    )
+    parser.add_argument("--add-rule", metavar="RULE", help="顧客固有の仕訳ルールを追加")
+    parser.add_argument("--list-rules", action="store_true", help="仕訳ルール一覧を表示")
+
+    # 処理ログ
+    parser.add_argument("--show-log", action="store_true", help="処理ログを表示")
 
     args = parser.parse_args()
 
@@ -311,7 +358,6 @@ def main():
 
     # --- 以降は --client が必須 ---
     if not args.client:
-        # 顧客未指定時はヘルプを表示
         print("エラー: --client で顧客IDを指定してください。")
         print()
         show_client_list()
@@ -321,6 +367,7 @@ def main():
         print("  python main.py --client company_a --local file.pdf   # ローカルファイル処理")
         print("  python main.py --client company_a --list-mappings    # マッピング確認")
         print("  python main.py --client company_a --add-rule \"ルール\" # 暗黙知を追加")
+        print("  python main.py --client company_a --show-log         # 処理ログ確認")
         sys.exit(1)
 
     client_id = args.client
@@ -346,6 +393,11 @@ def main():
             print("エラー: 取引先名と借方勘定科目は必須です。")
             sys.exit(1)
         add_mapping(client_id, *args.add_mapping[:5])
+        return
+
+    # --- 処理ログ ---
+    if args.show_log:
+        show_processing_log(client_id)
         return
 
     # --- メイン処理 ---
