@@ -231,10 +231,28 @@ def rename_for_denchoho(service, file_info: dict, invoice_data: dict):
     return new_name
 
 
+def _get_year_month_folder(service, parent_folder_id: str, date_str: str) -> str:
+    """日付文字列から年月フォルダを取得（なければ作成）する
+
+    藤井氏・小澤氏の指摘: ファイル名だけでなく年月別フォルダで整理すべき。
+    「処理済み/2026年03月/」のように年月でサブフォルダを切る。
+    """
+    # YYYY/MM/DD or YYYYMMDD から年月を抽出
+    clean = date_str.replace("/", "")
+    if len(clean) >= 6:
+        year = clean[:4]
+        month = clean[4:6]
+        folder_name = f"{year}年{month}月"
+    else:
+        folder_name = "日付不明"
+
+    return get_or_create_subfolder(service, parent_folder_id, folder_name)
+
+
 def upload_csv_and_move_sources(service, config: dict, csv_path: str,
                                  source_files: list[dict],
                                  invoice_data_list: list[dict] | None = None):
-    """CSVをDriveにアップロードし、処理済みファイルをリネーム＋移動する"""
+    """CSVをDriveにアップロードし、処理済みファイルをリネーム＋年月フォルダに移動する"""
     watch_folder_id = config["google_drive"]["watch_folder_id"]
 
     # サブフォルダを取得または作成
@@ -246,14 +264,22 @@ def upload_csv_and_move_sources(service, config: dict, csv_path: str,
     csv_file_id = upload_file(service, csv_path, import_folder_id, csv_name)
     print(f"CSVをDriveにアップロード: {csv_name}")
 
-    # 処理済みファイルを電帳法対応リネーム＋移動
+    # 処理済みファイルを電帳法対応リネーム＋年月フォルダに移動
     for i, f in enumerate(source_files):
-        # 電帳法対応のファイル名にリネーム
+        date_str = ""
         if invoice_data_list and i < len(invoice_data_list):
+            # 電帳法対応のファイル名にリネーム
             new_name = rename_for_denchoho(service, f, invoice_data_list[i])
+            date_str = invoice_data_list[i].get("date", "")
             print(f"  リネーム: {f['name']} → {new_name}")
 
-        move_file(service, f["id"], processed_folder_id)
+        # 年月サブフォルダに移動（例: 処理済み/2026年03月/）
+        if date_str:
+            dest_folder_id = _get_year_month_folder(service, processed_folder_id, date_str)
+        else:
+            dest_folder_id = processed_folder_id
+
+        move_file(service, f["id"], dest_folder_id)
         print(f"  移動: → 処理済み/")
 
     return csv_file_id

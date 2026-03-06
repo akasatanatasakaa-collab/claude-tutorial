@@ -28,6 +28,12 @@
 
     # 処理ログを表示
     python main.py --client company_a --show-log
+
+    # 電帳法対応: 共有ドライブのセットアップガイドを表示
+    python main.py --denchoho-guide
+
+    # 電帳法対応: 事務処理規程テンプレートを生成
+    python main.py --generate-regulations --firm-name "○○税理士事務所"
 """
 
 import argparse
@@ -50,6 +56,7 @@ from client_manager import (
     load_client_config,
     load_processing_log,
 )
+from denchoho_setup import generate_regulations, show_shared_drive_guide
 from drive_client import fetch_invoices, upload_csv_and_move_sources
 from gemini_reader import process_files
 from mf_exporter import (
@@ -360,6 +367,16 @@ def main():
     # 処理ログ
     parser.add_argument("--show-log", action="store_true", help="処理ログを表示")
 
+    # 電子帳簿保存法対応
+    parser.add_argument("--denchoho-guide", action="store_true",
+                        help="共有ドライブの電帳法対応セットアップガイドを表示")
+    parser.add_argument("--generate-regulations", action="store_true",
+                        help="事務処理規程のテンプレートを生成")
+    parser.add_argument("--firm-name", metavar="NAME",
+                        help="事務所名（--generate-regulationsと併用）")
+    parser.add_argument("--representative", metavar="NAME",
+                        help="管理責任者名（--generate-regulationsと併用、省略可）")
+
     args = parser.parse_args()
 
     # --- 顧客一覧表示 ---
@@ -372,6 +389,19 @@ def main():
         name = args.name or args.create_client
         drive_folder = args.drive_folder or ""
         create_client(args.create_client, name, drive_folder)
+        return
+
+    # --- 電帳法対応ガイド ---
+    if args.denchoho_guide:
+        show_shared_drive_guide()
+        return
+
+    # --- 事務処理規程の生成 ---
+    if args.generate_regulations:
+        firm_name = args.firm_name or "○○税理士事務所"
+        representative = args.representative or ""
+        output_path = str(BASE_DIR / "事務処理規程.txt")
+        generate_regulations(firm_name, output_path, representative)
         return
 
     # --- 以降は --client が必須 ---
