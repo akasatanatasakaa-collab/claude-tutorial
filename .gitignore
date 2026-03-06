@@ -1,1 +1,7 @@
 __pycache__/
+
+# 請求書インポートシステム
+invoice_import/credentials.json
+invoice_import/token.json
+invoice_import/downloads/
+invoice_import/output/

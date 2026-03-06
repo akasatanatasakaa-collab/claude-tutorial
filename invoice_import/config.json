@@ -1,0 +1,18 @@
+{
+    "google_drive": {
+        "credentials_path": "credentials.json",
+        "token_path": "token.json",
+        "watch_folder_id": "ここにGoogle DriveのフォルダIDを設定",
+        "processed_folder_id": "処理済みファイルの移動先フォルダID（任意）"
+    },
+    "gemini": {
+        "api_key_env": "GEMINI_API_KEY",
+        "model": "gemini-2.0-flash"
+    },
+    "mf_export": {
+        "output_dir": "output",
+        "encoding": "utf-8",
+        "tax_rate": 0.10
+    },
+    "supported_extensions": [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
+}

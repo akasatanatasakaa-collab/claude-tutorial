@@ -1,0 +1,37 @@
+{
+    "description": "過去の仕訳履歴。取引先名をキーにして、過去の勘定科目・補助科目・税区分のマッピングを保持する。",
+    "mappings": {
+        "AWS": {
+            "debit_account": "通信費",
+            "debit_sub_account": "クラウドサービス",
+            "credit_account": "普通預金",
+            "credit_sub_account": "",
+            "tax_category": "課税仕入 10%",
+            "memo": "AWSインフラ利用料"
+        },
+        "さくらインターネット": {
+            "debit_account": "通信費",
+            "debit_sub_account": "サーバー費用",
+            "credit_account": "普通預金",
+            "credit_sub_account": "",
+            "tax_category": "課税仕入 10%",
+            "memo": "レンタルサーバー"
+        },
+        "Google Cloud": {
+            "debit_account": "通信費",
+            "debit_sub_account": "クラウドサービス",
+            "credit_account": "普通預金",
+            "credit_sub_account": "",
+            "tax_category": "課税仕入 10%",
+            "memo": "GCPサービス利用料"
+        }
+    },
+    "default": {
+        "debit_account": "雑費",
+        "debit_sub_account": "",
+        "credit_account": "普通預金",
+        "credit_sub_account": "",
+        "tax_category": "課税仕入 10%",
+        "memo": ""
+    }
+}
