@@ -5,3 +5,4 @@ invoice_import/credentials.json
 invoice_import/token.json
 invoice_import/downloads/
 invoice_import/output/
+invoice_import/clients/*/output/

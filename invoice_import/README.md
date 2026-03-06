@@ -1,20 +1,36 @@
-# 請求書・領収書 → MFクラウド会計インポートシステム
+# 請求書・領収書 → MFクラウド会計インポートシステム（会計事務所向け）
 
 Google Driveに保存された請求書・領収書をGemini APIで読み取り、
-過去の仕訳履歴を参考にMoneyForwardクラウド会計のインポート用CSVを自動生成するシステム。
+**顧客ごとの過去の仕訳パターン・暗黙知**を参考にMoneyForwardクラウド会計のインポート用CSVを自動生成する。
+
+## 会計事務所向けの設計思想
+
+手島春樹氏（税理士法人SoLabo）が指摘するように、仕訳は証憑を見ただけでは決まらない。
+「なぜその勘定科目か」「なぜその税区分か」は顧客ごとの暗黙知に依存する。
+
+このシステムでは：
+- **顧客ごとに仕訳履歴を分離管理**（A社の癖がB社に混ざらない）
+- **暗黙知をルールとして明文化**し、Gemini APIのプロンプトに注入
+- 処理するたびに新しい取引先パターンを**自動学習**
 
 ## システム構成
 
 ```
 invoice_import/
-├── main.py              # メインスクリプト（エントリーポイント）
-├── drive_client.py      # Google Drive連携モジュール
-├── gemini_reader.py     # Gemini API請求書読み取りモジュール
-├── mf_exporter.py       # MF仕訳CSV生成 + 仕訳履歴管理
-├── config.json          # 設定ファイル
-├── journal_history.json # 過去の仕訳マッピング履歴
+├── main.py              # メインスクリプト
+├── client_manager.py    # 顧客管理モジュール
+├── drive_client.py      # Google Drive連携
+├── gemini_reader.py     # Gemini API読み取り（顧客ルール反映）
+├── mf_exporter.py       # MF仕訳CSV生成 + 履歴管理
+├── config.json          # グローバル設定
 ├── requirements.txt     # 依存パッケージ
-└── output/              # 生成されたCSVの出力先
+└── clients/             # 顧客別データ
+    ├── company_a/
+    │   ├── client_config.json    # 顧客設定（Driveフォルダ等）
+    │   ├── journal_history.json  # この顧客の仕訳パターン + ルール
+    │   └── output/               # CSV出力先
+    ├── company_b/
+    │   ├── ...
 ```
 
 ## セットアップ
@@ -29,9 +45,7 @@ pip install -r requirements.txt
 
 1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成
 2. Google Drive API を有効化
-3. OAuth 2.0 クライアントIDを作成し、`credentials.json` をダウンロード
-4. `credentials.json` を `invoice_import/` ディレクトリに配置
-5. `config.json` の `watch_folder_id` に監視対象のGoogle DriveフォルダIDを設定
+3. OAuth 2.0 クライアントIDを作成し `credentials.json` を配置
 
 ### 3. Gemini API の設定
 
@@ -39,68 +53,75 @@ pip install -r requirements.txt
 export GEMINI_API_KEY=your_api_key_here
 ```
 
-[Google AI Studio](https://aistudio.google.com/) からAPIキーを取得できます。
-
 ## 使い方
 
-### Google Driveから取得して処理
+### 顧客の登録
 
 ```bash
-python main.py
+# 新規顧客を作成（Google DriveフォルダIDを指定）
+python main.py --create-client company_a --name "株式会社A" --drive-folder "1abc..."
+
+# 顧客一覧を確認
+python main.py --list-clients
 ```
 
-### ローカルファイルを直接処理
+### 仕訳の処理
 
 ```bash
-python main.py --local invoice1.pdf receipt.png
+# Google Driveから取得して処理
+python main.py --client company_a
+
+# ローカルファイルを直接処理
+python main.py --client company_a --local invoice1.pdf receipt.png
 ```
 
-### 仕訳マッピングの管理
+### 暗黙知の管理（重要）
+
+顧客ごとの「仕訳の癖」をルールとして登録する。
+このルールはGemini APIのプロンプトに注入され、読み取り精度が向上する。
 
 ```bash
-# 登録済みマッピング一覧
-python main.py --list-mappings
+# ルールの追加
+python main.py --client company_a --add-rule "交際費は5,000円以下でも全て交際費（会議費は使わない）"
+python main.py --client company_a --add-rule "Amazonの購入は全て消耗品費で処理"
+python main.py --client company_a --add-rule "社長の携帯料金は通信費ではなく役員報酬の付随費用"
+python main.py --client company_a --add-rule "売上の入金は全て売掛金の消込（売上計上はしない）"
 
-# マッピングを手動追加
-python main.py --add-mapping "取引先名" "勘定科目"
-python main.py --add-mapping "取引先名" "勘定科目" "補助科目" "貸方科目" "税区分"
+# ルール一覧の確認
+python main.py --client company_a --list-rules
+```
+
+### マッピングの管理
+
+```bash
+# 取引先→勘定科目のマッピングを手動追加
+python main.py --client company_a --add-mapping "AWS" "通信費" "クラウドサービス"
+python main.py --client company_a --add-mapping "オフィスデポ" "消耗品費"
+
+# マッピング一覧の確認
+python main.py --client company_a --list-mappings
 ```
 
 ## 処理フロー
 
 ```
-1. Google Driveの指定フォルダからファイルを取得（またはローカルファイル指定）
-2. Gemini APIで画像/PDFから請求書情報を抽出（取引先、日付、金額など）
-3. journal_history.json の過去仕訳と照合し、勘定科目を自動マッピング
-4. MFクラウド会計のインポート用CSVを生成
-5. 新しい取引先を仕訳履歴に自動追加（学習機能）
+1. --client で顧客を指定
+2. Google Drive（顧客別フォルダ）からファイルを取得
+3. 顧客の暗黙知ルール + 過去マッピングをGemini APIのプロンプトに注入
+4. Gemini APIで画像/PDFから請求書情報を抽出
+5. 顧客固有のjournal_history.jsonと照合し勘定科目を自動マッピング
+6. MFクラウド会計のインポート用CSVを顧客別ディレクトリに出力
+7. 新しい取引先を顧客の仕訳履歴に自動追加（学習）
 ```
 
-## 生成されるCSVの形式
+## 暗黙知をどう扱うか
 
-MFクラウド会計の「仕訳帳」→「インポート」で取り込めるCSV形式です。
+手島氏の指摘する「AIだけでは記帳が自動化できない」理由への対処：
 
-| 項目 | 説明 |
-|------|------|
-| 取引No | 連番 |
-| 取引日 | YYYY/MM/DD |
-| 借方勘定科目 | 過去仕訳から自動設定 |
-| 借方補助科目 | 過去仕訳から自動設定 |
-| 借方取引先 | 請求書から抽出 |
-| 借方税区分 | 過去仕訳から自動設定 |
-| 借方金額 | 請求書から抽出 |
-| 貸方勘定科目 | 過去仕訳から自動設定 |
-| 貸方金額 | 請求書から抽出 |
-| 摘要 | 取引先名 + 品目 |
-| メモ | 元ファイル名 |
-
-## 仕訳マッピングの仕組み
-
-`journal_history.json` に取引先ごとの仕訳パターンを保持しています。
-
-- **完全一致** → そのまま適用
-- **部分一致** → 取引先名に既存キーが含まれていれば適用
-- **あいまい一致** → 類似度60%以上で最も近いものを適用
-- **マッチなし** → デフォルト設定（雑費）を適用
-
-処理後、新しい取引先は自動的に履歴に追加されます。
+| 課題 | このシステムでの対応 |
+|------|---------------------|
+| 勘定科目の判断は顧客ごとに違う | `clients/*/journal_history.json` で顧客別に管理 |
+| 判断基準が明文化されていない | `--add-rule` で暗黙知を形式知として記録 |
+| 同じ取引先でも科目が変わる | ルールで条件分岐を記述可能 |
+| ベテランの頭の中にしかない | ルールとして蓄積し、担当者が変わっても引き継げる |
+| AIは答えにブレがある | 過去マッピングをプロンプトに注入し一貫性を確保 |
