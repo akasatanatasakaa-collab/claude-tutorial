@@ -40,8 +40,29 @@ def find_best_match(vendor_name: str, mappings: dict, threshold: float = 0.6) ->
     return None
 
 
-def map_to_journal(invoice_data: dict, history: dict) -> dict:
-    """請求書データを過去の仕訳履歴に基づいて仕訳データにマッピングする"""
+def _determine_tax_category(invoice_data: dict, mapping_tax: str) -> str:
+    """請求書データから適切な税区分を判定する
+
+    軽減税率（8%）対象: 飲食料品（酒類除く）、定期購読の新聞
+    標準税率（10%）対象: それ以外
+    """
+    tax_rate = invoice_data.get("tax_rate", "")
+
+    if tax_rate == "8%":
+        return "課税仕入 8%（軽）"
+    elif tax_rate == "10%":
+        return "課税仕入 10%"
+    else:
+        # tax_rateが未設定またはmixedの場合はマッピングのデフォルトを使用
+        return mapping_tax
+
+
+def map_to_journal(invoice_data: dict, history: dict) -> dict | list[dict]:
+    """請求書データを過去の仕訳履歴に基づいて仕訳データにマッピングする
+
+    tax_rateが"mixed"の場合、品目ごとに仕訳を分割してリストで返す。
+    それ以外は単一の仕訳dictを返す。
+    """
     vendor = invoice_data.get("vendor_name", "不明")
     mappings = history.get("mappings", {})
     default = history.get("default", {})
@@ -63,6 +84,38 @@ def map_to_journal(invoice_data: dict, history: dict) -> dict:
     if invoice_num:
         summary += f" (No.{invoice_num})"
 
+    mapping_tax = mapping.get("tax_category", "課税仕入 10%")
+    tax_rate = invoice_data.get("tax_rate", "")
+
+    # 税率混在の場合: 品目ごとに仕訳を分割
+    if tax_rate == "mixed":
+        items = invoice_data.get("items", [])
+        if items:
+            journals = []
+            for item in items:
+                item_tax = "課税仕入 8%（軽）" if item.get("tax_rate") == "8%" else "課税仕入 10%"
+                item_summary = f"{vendor} {item.get('description', '')}"
+                if invoice_num:
+                    item_summary += f" (No.{invoice_num})"
+                journals.append({
+                    "date": invoice_data.get("date", ""),
+                    "debit_account": mapping.get("debit_account", "雑費"),
+                    "debit_sub_account": mapping.get("debit_sub_account", ""),
+                    "credit_account": mapping.get("credit_account", "普通預金"),
+                    "credit_sub_account": mapping.get("credit_sub_account", ""),
+                    "amount": item.get("amount", 0),
+                    "tax_category": item_tax,
+                    "summary": item_summary,
+                    "vendor": vendor,
+                    "source_file": invoice_data.get("source_file", ""),
+                    "drive_link": invoice_data.get("drive_link", ""),
+                })
+            print(f"  税率混在: {len(journals)}行に分割")
+            return journals
+
+    # 単一税率の場合
+    tax_category = _determine_tax_category(invoice_data, mapping_tax)
+
     return {
         "date": invoice_data.get("date", ""),
         "debit_account": mapping.get("debit_account", "雑費"),
@@ -70,7 +123,7 @@ def map_to_journal(invoice_data: dict, history: dict) -> dict:
         "credit_account": mapping.get("credit_account", "普通預金"),
         "credit_sub_account": mapping.get("credit_sub_account", ""),
         "amount": invoice_data.get("amount", 0),
-        "tax_category": mapping.get("tax_category", "課税仕入 10%"),
+        "tax_category": tax_category,
         "summary": summary,
         "vendor": vendor,
         "source_file": invoice_data.get("source_file", ""),

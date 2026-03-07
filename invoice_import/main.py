@@ -201,12 +201,15 @@ def run_processing(config: dict, client_id: str,
             if source in drive_link_map:
                 data["drive_link"] = drive_link_map[source]
 
-    # 2. 抽出データを仕訳にマッピング
+    # 2. 抽出データを仕訳にマッピング（税率混在時は複数行に分割される）
     print("\n=== 仕訳マッピング ===")
     journals = []
     for invoice_data in invoice_data_list:
-        journal = map_to_journal(invoice_data, history)
-        journals.append(journal)
+        result = map_to_journal(invoice_data, history)
+        if isinstance(result, list):
+            journals.extend(result)
+        else:
+            journals.append(result)
 
     # 3. 結果のプレビュー表示
     print("\n=== 仕訳プレビュー ===")
